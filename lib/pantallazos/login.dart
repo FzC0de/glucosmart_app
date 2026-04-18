@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:glucosmart_app/pantallazos/registro.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -197,25 +198,23 @@ class LoginScreen extends StatelessWidget {
 
               const SizedBox(height: 24),
 
-              RichText(
-                text: const TextSpan(
-                  text: '¿No tienes cuenta? ',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF6B7280),
-                  ),
-                  children: [
-                    TextSpan(
-                      text: 'Crear cuenta',
-                      style: TextStyle(
-                        color: Color(0xFF2F80ED),
-                        fontWeight: FontWeight.w700,
-                      ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const RegistroScreen(),
                     ),
-                  ],
+                  );
+                },
+                child: const Text(
+                  "Crear cuenta",
+                  style: TextStyle(
+                    color: Color(0xFF2D65D8),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-
               const SizedBox(height: 24),
 
               Container(
