@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'pantallazos/login.dart';
 
 void main() {
   runApp(const GlucoSmartApp());
@@ -12,14 +13,11 @@ class GlucoSmartApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'GlucoSmart',
-
-      initialRoute: '/login',
-
+      initialRoute: '/',
       theme: ThemeData(
         scaffoldBackgroundColor: const Color(0xFFF4F8FF),
         useMaterial3: true,
       ),
-
       routes: {
         '/': (context) => const BienvenidaScreen(),
         '/login': (context) => const LoginScreen(),
@@ -211,7 +209,9 @@ class BienvenidaScreen extends StatelessWidget {
                     ),
                     elevation: 0,
                   ),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/login');
+                  },
                   child: const Text(
                     'Comenzar',
                     style: TextStyle(
@@ -235,7 +235,9 @@ class BienvenidaScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/login');
+                  },
                   child: const Text(
                     'Iniciar sesión',
                     style: TextStyle(
