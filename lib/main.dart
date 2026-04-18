@@ -12,11 +12,18 @@ class GlucoSmartApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'GlucoSmart',
+
+      initialRoute: '/login',
+
       theme: ThemeData(
         scaffoldBackgroundColor: const Color(0xFFF4F8FF),
         useMaterial3: true,
       ),
-      home: const BienvenidaScreen(),
+
+      routes: {
+        '/': (context) => const BienvenidaScreen(),
+        '/login': (context) => const LoginScreen(),
+      },
     );
   }
 }
