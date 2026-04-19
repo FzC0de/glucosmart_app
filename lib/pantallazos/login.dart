@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:glucosmart_app/pantallazos/registro.dart';
+import '/pantallas/registro.dart';
+import '/navegacion_principal.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -129,7 +130,12 @@ class LoginScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => const NavegacionPrincipal()),
+                    );
+                  },
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
