@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'pantallazos/login.dart';
+import 'pantallas/login.dart';
 
 void main() {
   runApp(const GlucoSmartApp());
