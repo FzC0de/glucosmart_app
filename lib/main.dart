@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'pantallas/login.dart';
+import 'pantallazos/login.dart';
 
 void main() {
   runApp(const GlucoSmartApp());
@@ -20,7 +20,7 @@ class GlucoSmartApp extends StatelessWidget {
       ),
       routes: {
         '/': (context) => const BienvenidaScreen(),
-        '/login': (context) => const LoginScreen(),
+        '/login': (context) =>  LoginScreen(),
       },
     );
   }

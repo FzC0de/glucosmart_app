@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
 
-// --- NUEVO: MODELO DE PERFIL ---
+import 'package:flutter/material.dart';
+import 'services/auth_service.dart';
+
+// --- MODELO DE PERFIL ---
 class PerfilUsuario {
   String nombre;
   int? edad;
@@ -32,35 +34,77 @@ class RegistroSalud {
     this.presionSis,
     this.presionDia,
     required this.fecha,
-    this.notas = ''
+    this.notas = '',
   });
 
   bool get tieneGlucosa => glucosa != null;
   bool get tienePresion => presionSis != null && presionDia != null;
 }
 
-// --- EL CEREBRO ---
+// --- ESTADO GLOBAL DE LA APLICACIÓN ---
 class AppState extends ChangeNotifier {
   static final AppState _instancia = AppState._interno();
+
   factory AppState() => _instancia;
+
   AppState._interno();
 
-  // 1. Datos del usuario por defecto
-  PerfilUsuario perfil = PerfilUsuario(nombre: "Luis", edad: 25, peso: 75.5, altura: 1.75);
+  final AuthService _authService = AuthService();
 
-  // 2. Historial de prueba
-  List<RegistroSalud> registros = [
-    RegistroSalud(id: '1', glucosa: 98, presionSis: 120, presionDia: 80, fecha: DateTime.now()),
-    RegistroSalud(id: '2', presionSis: 125, presionDia: 82, fecha: DateTime.now().subtract(const Duration(days: 9)), notas: 'Semana pasada'),
-    RegistroSalud(id: '3', glucosa: 110, fecha: DateTime.now().subtract(const Duration(days: 16)), notas: 'Hace 2 semanas'),
-    RegistroSalud(id: '4', glucosa: 105, presionSis: 118, presionDia: 78, fecha: DateTime.now().subtract(const Duration(days: 23)), notas: 'Hace 3 semanas'),
-    RegistroSalud(id: '5', glucosa: 95, presionSis: 115, presionDia: 75, fecha: DateTime.now().subtract(const Duration(days: 30)), notas: 'Hace 4 semanas'),
-  ];
+  // PERFIL
+  PerfilUsuario perfil = PerfilUsuario(
+    nombre: 'Luis',
+    edad: 25,
+    peso: 75.5,
+    altura: 1.75,
+  );
+
+  // REGISTROS: ahora comienzan vacíos
+  List<RegistroSalud> registros = [];
+
+  // ESTADO DE CARGA
+  bool cargandoRegistros = false;
+  String? errorRegistros;
+
+  // --- CARGAR MEDICIONES DESDE FASTAPI ---
+  Future<void> cargarRegistrosDesdeApi() async {
+    cargandoRegistros = true;
+    errorRegistros = null;
+    notifyListeners();
+
+    try {
+      final datos = await _authService.obtenerMediciones();
+
+      registros = datos.map((item) {
+        return RegistroSalud(
+          id: item['id'].toString(),
+          glucosa: item['glucosa'] == null
+              ? null
+              : (item['glucosa'] as num).toDouble(),
+          presionSis: item['presion_sis'] == null
+              ? null
+              : (item['presion_sis'] as num).toInt(),
+          presionDia: item['presion_dia'] == null
+              ? null
+              : (item['presion_dia'] as num).toInt(),
+          fecha: DateTime.parse(item['fecha'].toString()),
+          notas: item['notas']?.toString() ?? '',
+        );
+      }).toList();
+
+      registros.sort((a, b) => b.fecha.compareTo(a.fecha));
+    } catch (e) {
+      errorRegistros = e.toString();
+    } finally {
+      cargandoRegistros = false;
+      notifyListeners();
+    }
+  }
 
   // --- MÉTODOS DE PERFIL ---
   void actualizarPerfil(PerfilUsuario nuevoPerfil) {
     perfil = nuevoPerfil;
-    notifyListeners(); // Avisa al Dashboard que el nombre o datos cambiaron
+    notifyListeners();
   }
 
   // --- MÉTODOS DE REGISTROS ---
@@ -71,7 +115,8 @@ class AppState extends ChangeNotifier {
   }
 
   void actualizarRegistro(RegistroSalud actualizado) {
-    int index = registros.indexWhere((r) => r.id == actualizado.id);
+    final index = registros.indexWhere((r) => r.id == actualizado.id);
+
     if (index != -1) {
       registros[index] = actualizado;
       registros.sort((a, b) => b.fecha.compareTo(a.fecha));
@@ -81,6 +126,12 @@ class AppState extends ChangeNotifier {
 
   void eliminarRegistro(String id) {
     registros.removeWhere((r) => r.id == id);
+    notifyListeners();
+  }
+
+  // --- LIMPIAR DATOS AL CERRAR SESIÓN ---
+  void limpiarRegistros() {
+    registros = [];
     notifyListeners();
   }
 }

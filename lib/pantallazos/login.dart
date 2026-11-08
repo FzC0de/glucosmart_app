@@ -1,9 +1,117 @@
-import 'package:flutter/material.dart';
-import '/pantallas/registro.dart';
-import '/navegacion_principal.dart';
 
-class LoginScreen extends StatelessWidget {
+import 'package:flutter/material.dart';
+import 'package:glucosmart_app/pantallazos/registro.dart';
+import 'package:glucosmart_app/navegacion_principal.dart';
+import 'package:glucosmart_app/services/auth_service.dart';
+import 'package:glucosmart_app/estado_global.dart';
+
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final AuthService _authService = AuthService();
+
+  final TextEditingController _emailController =
+      TextEditingController();
+
+  final TextEditingController _passwordController =
+      TextEditingController();
+
+  bool _isLoading = false;
+  bool _obscurePassword = true;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _iniciarSesion() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      _mostrarMensaje('Ingresa tu correo y contraseña.');
+      return;
+    }
+
+    if (!email.contains('@')) {
+      _mostrarMensaje('Ingresa un correo electrónico válido.');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final resultado = await _authService.login(
+        email: email,
+        password: password,
+      );
+
+      // Actualizar el perfil local con los datos devueltos por FastAPI.
+      // El backend devuelve el usuario dentro de la propiedad "user".
+      final usuario = resultado['user'];
+
+      if (usuario is Map && usuario['nombre'] != null) {
+        appState.actualizarPerfil(
+          PerfilUsuario(
+            nombre: usuario['nombre'].toString(),
+            edad: appState.perfil.edad,
+            peso: appState.perfil.peso,
+            altura: appState.perfil.altura,
+            notificacionesActivas:
+                appState.perfil.notificacionesActivas,
+          ),
+        );
+      }
+
+      // Comprobar que el token se haya guardado correctamente.
+      final sesionActiva = await _authService.tieneSesion();
+
+      if (!sesionActiva) {
+        throw Exception('No se pudo guardar la sesión.');
+      }
+
+      if (!mounted) return;
+
+      _mostrarMensaje('Inicio de sesión exitoso.');
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const NavegacionPrincipal(),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      final mensaje = e.toString().replaceFirst('Exception: ', '');
+      _mostrarMensaje(mensaje);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _mostrarMensaje(String mensaje) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje),
+        backgroundColor: const Color(0xFF12305B),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -11,7 +119,10 @@ class LoginScreen extends StatelessWidget {
       backgroundColor: const Color(0xFFF4F8FF),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 18,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -75,9 +186,11 @@ class LoginScreen extends StatelessWidget {
 
               const SizedBox(height: 8),
 
-              const _CustomInput(
+              _CustomInput(
                 hintText: 'ejemplo@correo.com',
                 prefixIcon: Icons.email_outlined,
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
               ),
 
               const SizedBox(height: 18),
@@ -96,10 +209,26 @@ class LoginScreen extends StatelessWidget {
 
               const SizedBox(height: 8),
 
-              const _CustomInput(
+              _CustomInput(
                 hintText: 'Ingresa tu contraseña',
                 prefixIcon: Icons.lock_outline,
-                suffixIcon: Icons.remove_red_eye_outlined,
+                controller: _passwordController,
+                obscureText: _obscurePassword,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    color: const Color(0xFF7C8798),
+                    size: 20,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
+                ),
+                onSubmitted: (_) => _iniciarSesion(),
               ),
 
               const SizedBox(height: 10),
@@ -130,26 +259,30 @@ class LoginScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => const NavegacionPrincipal()),
-                    );
-                  },
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Iniciar sesión',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
+                  onPressed: _isLoading ? null : _iniciarSesion,
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Iniciar sesión',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            Icon(Icons.arrow_forward, size: 18),
+                          ],
                         ),
-                      ),
-                      SizedBox(width: 10),
-                      Icon(Icons.arrow_forward, size: 18),
-                    ],
-                  ),
                 ),
               ),
 
@@ -214,13 +347,14 @@ class LoginScreen extends StatelessWidget {
                   );
                 },
                 child: const Text(
-                  "Crear cuenta",
+                  'Crear cuenta',
                   style: TextStyle(
                     color: Color(0xFF2D65D8),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
+
               const SizedBox(height: 24),
 
               Container(
@@ -281,12 +415,20 @@ class LoginScreen extends StatelessWidget {
 class _CustomInput extends StatelessWidget {
   final String hintText;
   final IconData prefixIcon;
-  final IconData? suffixIcon;
+  final TextEditingController controller;
+  final TextInputType keyboardType;
+  final bool obscureText;
+  final Widget? suffixIcon;
+  final ValueChanged<String>? onSubmitted;
 
   const _CustomInput({
     required this.hintText,
     required this.prefixIcon,
+    required this.controller,
+    this.keyboardType = TextInputType.text,
+    this.obscureText = false,
     this.suffixIcon,
+    this.onSubmitted,
   });
 
   @override
@@ -310,22 +452,33 @@ class _CustomInput extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              hintText,
+            child: TextField(
+              controller: controller,
+              keyboardType: keyboardType,
+              obscureText: obscureText,
+              onSubmitted: onSubmitted,
+              textInputAction: obscureText
+                  ? TextInputAction.done
+                  : TextInputAction.next,
               style: const TextStyle(
                 fontSize: 13,
-                color: Color(0xFF9AA4B2),
+                color: Color(0xFF12305B),
+              ),
+              decoration: InputDecoration(
+                hintText: hintText,
+                hintStyle: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF9AA4B2),
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 15,
+                ),
               ),
             ),
           ),
-          if (suffixIcon != null) ...[
-            Icon(
-              suffixIcon,
-              color: const Color(0xFF7C8798),
-              size: 20,
-            ),
-            const SizedBox(width: 12),
-          ],
+          if (suffixIcon != null) suffixIcon!,
+          if (suffixIcon != null) const SizedBox(width: 8),
         ],
       ),
     );
@@ -347,7 +500,9 @@ class _SocialButton extends StatelessWidget {
       height: 46,
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: const Color(0xFFD6DCE5)),
+        border: Border.all(
+          color: const Color(0xFFD6DCE5),
+        ),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
